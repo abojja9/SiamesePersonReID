@@ -100,8 +100,8 @@ class SiameseNet(object):
 #             print (f"Mode: {_set_type}, {self.reset_data[_set_type]}")
         data_filename = os.path.join(args.tf_record_dir, 'data_summary.txt')
         with tf.gfile.Open(data_filename, 'r') as f:
-            self.num_validation = f.readline()
-            num_dataset = f.readline()
+            self.num_validation = int(f.readline())
+            num_dataset = int(f.readline())
         self.num_training = int(int(num_dataset) - int(self.num_validation))
         print(f'Number of Training Images {self.num_training}')
         print(f'Number of Validation Images {self.num_validation}')
@@ -279,11 +279,6 @@ class SiameseNet(object):
             res = self.sess.run(fetch, 
                                 feed_dict={self.is_training: True, self.handle: training_handle}
                                )
-            epoch = (res["step"] * self.batch_size) // self.num_training
-            print("Epoch: {}, Iteration: {}, Time: {}".format(
-                        epoch, res["step"], time.time() - start_time
-                    )
-                )
 
             # Get summary every reporting interval
             if b_fetch_summary:
@@ -347,12 +342,12 @@ class SiameseNet(object):
     def get_model_str(self, best=False):
         if best is True:
             model_name = "mars.best.model"
-            model_dir = "MARS_PERSON_REID_BEST_MODELS_%s" % (
-                self.loss_fn)
+            model_dir = "MARS_PERSON_REID_BEST_MODELS_%s_%s_%s_%s" % (
+                self.loss_fn, self.network_type, self.batch_size, self.lr)
         else:
             model_name = "mars.model"
-            model_dir = "MARS_PERSON_REID_%s" % (
-                self.loss_fn)
+            model_dir = "MARS_PERSON_REID_%s_%s_%s" % (
+                self.loss_fn, self.network_type, self.batch_size, self.lr)
 
         return model_name, model_dir
 
