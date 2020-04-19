@@ -20,6 +20,7 @@ class SiameseNet(object):
         self.dataset_dir = args.dataset_dir
         self.tf_record_dir = args.tf_record_dir
         self.loss_fn = args.loss
+        self.data_augment = args.data_augment
 
         if args.network_type == "pretrained":
             self.net = pretrained  
@@ -28,6 +29,11 @@ class SiameseNet(object):
             
         self.loss_fn_1 = identity_loss
         self.loss_fn_2 = contrastive_loss
+        
+        self.loss = args.loss
+        self.network_type = args.network_type 
+        self.batch_size = args.batch_size
+        self.lr = args.lr
             
 #         if args.loss == "contrastive":
 #             self.loss_fn = contrastive_loss
@@ -73,6 +79,7 @@ class SiameseNet(object):
             self.dataset[_set_type] =  get_data(
                 self.tf_record_dir + '/' + filename,
                 self.batch_size,
+                self.data_augment,
                 train
             )
             
@@ -342,12 +349,15 @@ class SiameseNet(object):
     def get_model_str(self, best=False):
         if best is True:
             model_name = "mars.best.model"
-            model_dir = "MARS_PERSON_REID_BEST_MODELS_%s_%s_%s_%s" % (
-                self.loss_fn, self.network_type, self.batch_size, self.lr)
+            model_dir = f"MARS_PERSON_REID_BEST_MODELS_{self.loss}_{self.network_type}_{self.batch_size}_{self.lr}_augment_{self.data_augment}" 
+#             % (
+#                 self.loss, self.network_type, self.batch_size, self.lr)
         else:
             model_name = "mars.model"
-            model_dir = "MARS_PERSON_REID_%s_%s_%s" % (
-                self.loss_fn, self.network_type, self.batch_size, self.lr)
+            model_dir = f"MARS_PERSON_REID_{self.loss}_{self.network_type}_{self.batch_size}_{self.lr}_augment_{self.data_augment}"
+#             "%s_%s_%s" % (
+#                 self.loss, self.network_type, self.batch_size, self.lr)
+        print ("[*]", model_name, model_dir)
 
         return model_name, model_dir
 
@@ -484,6 +494,7 @@ parser.add_argument('--save_iter_freq', dest='save_iter_freq', type=int, default
 parser.add_argument('--save_latest_freq', dest='save_latest_freq', type=int, default=5000, help='save the latest model every latest_freq sgd iterations (overwrites the previous latest model)')
 parser.add_argument('--continue_train', dest='continue_train', type=bool, default=True, help='if continue training, load the latest model: 1: true, 0: false')
 parser.add_argument('--subset_data', dest='subset_data', type=bool, default=False, help='if subset_data is true use 1000 sample to create the data: 1: true, 0: false')
+parser.add_argument('--data_augment', dest='data_augment', type=bool, default=False, help='if data_augment is true use data augmentation: 1: true, 0: false')
 
 parser.add_argument('--network_type', dest='network_type', default='siamese',help='pretrained, siamese')
 parser.add_argument('--checkpoint_dir', dest='checkpoint_dir', default='./checkpoint', help='models are saved here')

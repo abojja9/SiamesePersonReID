@@ -1,8 +1,8 @@
 import tensorflow as tf
 import numpy as np
+from functools import partial
 
-
-def load_dataset(tfrecords_path, batch_size, same_prob=0.5, diff_prob=0.5, repeat=True, train=True):
+def load_dataset(tfrecords_path, batch_size, augment=False, same_prob=0.5, diff_prob=0.5, repeat=True, train=True):
     """
 	Input:
     tfrecords_path
@@ -15,9 +15,13 @@ def load_dataset(tfrecords_path, batch_size, same_prob=0.5, diff_prob=0.5, repea
 	Return:
 	zipped dataset
 	"""
-    
-    x = load_data_from_tfrecord(tfrecords_path)
-    y = load_data_from_tfrecord(tfrecords_path)
+    if augment and train:
+        augment_phase = True
+    else:
+        augment_phase = False
+        
+    x = load_data_from_tfrecord(tfrecords_path, augment_phase)
+    y = load_data_from_tfrecord(tfrecords_path, augment_phase)
     
     dataset = tf.data.Dataset.zip((x, y))
 
@@ -36,13 +40,13 @@ def load_dataset(tfrecords_path, batch_size, same_prob=0.5, diff_prob=0.5, repea
     
     
 
-def load_data_from_tfrecord(filename, shuffle_buffer_size=2000):
+def load_data_from_tfrecord(filename, augment=False, shuffle_buffer_size=2000):
     # Step 1: Create a TFRecordDataset as an input pipeline.
 #     filename = os.path.join(tfrecord_location, name)
     dataset = tf.data.TFRecordDataset(filename)
 
     # Step 2: Define a decoder to read and parse data.
-    def decode(serialized_example):
+    def decode(serialized_example, augment=False):
         """
         Parses an image and related info from the given `serialized_example`.
         It is used as a map function for `dataset.map`
@@ -66,8 +70,14 @@ def load_data_from_tfrecord(filename, shuffle_buffer_size=2000):
 
         # 3. reshape
         image = tf.reshape(image, [height, width, 3])
+   
+#         img_b = tf.identity(image)*(1/255.0)
         
-        # 4: Preprocess the data.
+        # 4. Augment
+        if augment:
+            image = tf.image.flip_left_right(image)
+        
+        # 5: Preprocess the data.
         # Convert `image` from [0, 255] -> [0, 1.0] floats
         image = image * (1. / 255)
 
@@ -75,14 +85,15 @@ def load_data_from_tfrecord(filename, shuffle_buffer_size=2000):
 
     # Randomly shuffle the data
     dataset = dataset.shuffle(shuffle_buffer_size)
+    decode_fn = partial(decode, augment=augment)
     # Parse the record into tensors with map. map takes a Python function and applies it to every sample
-    dataset = dataset.map(decode, num_parallel_calls=4)  
+    dataset = dataset.map(decode_fn, num_parallel_calls=4)  
 
     return dataset
 
-def get_data(path, batch_size, train):
+def get_data(path, batch_size, augment, train):
     #import pdb; pdb.set_trace()
-    dataset = load_dataset(path, batch_size=batch_size, train=train)
+    dataset = load_dataset(path, batch_size=batch_size, augment=augment, train=train)
 #     iterator = dataset.make_initializable_iterator()#make_one_shot_iterator()
 #     next_elements = iterator.get_next()
 #     inputs, target = next_elements
