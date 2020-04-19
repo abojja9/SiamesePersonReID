@@ -8,3 +8,5 @@ log/
 validation/
 *.sh
 jobs/
+*dir*/
+

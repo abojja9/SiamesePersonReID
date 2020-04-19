@@ -41,7 +41,7 @@ def createDataRecord(out_filename, fnames, category2ids):
     writer = tf.io.TFRecordWriter(out_filename)
     for i in range(len(fnames)):
         # print how many images are saved every 1000 images
-        if not i % 100:
+        if not i % 1000:
             print(f'{out_filename}: {i}/{len(fnames)}')
             sys.stdout.flush()
         # Load the image
@@ -107,7 +107,8 @@ def main():
     
         # Use subset data for debugging purpose
         if args.subset_data:
-            filenames = filenames[:1000]
+            print ("[*] Using subset of data")
+            filenames = filenames[:200000]
     
         validation_size = 0.2
         train_category2ids = dict(zip(categories, range(len(categories))))
