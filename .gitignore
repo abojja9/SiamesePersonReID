@@ -1,0 +1,6 @@
+__pycache__/
+data/
+tf_record_dir/
+checkpoint/
+log/
+validation/
