@@ -6,3 +6,5 @@ tf_record_dir/
 checkpoint/
 log/
 validation/
+*.sh
+jobs/
