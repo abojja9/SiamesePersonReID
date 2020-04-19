@@ -1,5 +1,7 @@
 __pycache__/
+.ipynb_checkpoints/
 data/
+data
 tf_record_dir/
 checkpoint/
 log/
