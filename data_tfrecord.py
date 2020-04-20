@@ -108,7 +108,7 @@ def main():
         # Use subset data for debugging purpose
         if args.subset_data:
             print ("[*] Using subset of data")
-            filenames = filenames[:200000]
+            filenames = filenames[:100000]
     
         validation_size = 0.2
         train_category2ids = dict(zip(categories, range(len(categories))))
