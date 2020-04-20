@@ -12,3 +12,4 @@ jobs/
 *old*
 slurm*
 *zip
+!scripts/*.sh
