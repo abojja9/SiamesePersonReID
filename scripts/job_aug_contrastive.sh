@@ -7,5 +7,6 @@ python3 train_net.py \
 --lr=3e-3 \
 --summary_intv=1000 \
 --validation_intv=5000 \
+--data_augment=1 \
 --loss=contrastive \
 --tf_record_dir=./tf_record_dir_100k

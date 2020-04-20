@@ -106,9 +106,9 @@ def main():
         test_fnames, test_categories = get_filenames(test_data_root)
     
         # Use subset data for debugging purpose
-        if args.subset_data:
-            print ("[*] Using subset of data")
-            filenames = filenames[:100000]
+       # if args.subset_data:
+       #     print ("[*] Using subset of data")
+       #     filenames = filenames[:100000]
     
         validation_size = 0.2
         train_category2ids = dict(zip(categories, range(len(categories))))
