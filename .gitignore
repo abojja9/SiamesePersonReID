@@ -9,4 +9,5 @@ validation/
 *.sh
 jobs/
 *dir*/
+*old*
 
