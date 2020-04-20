@@ -83,7 +83,7 @@ def network(left_im, right_im, is_training, batch_size):
     return logits, left_features, right_features
 
 
-def contrastive_loss(left_feat, right_feat, y, left_label, right_label, margin=0.2, use_loss=False):
+def contrastive_loss(left_feat, right_feat, y, left_label, right_label, margin=1.0, use_loss=False):
     label = tf.equal(left_label, right_label)
     y = tf.cast(label, tf.float32)
 
@@ -108,6 +108,18 @@ def identity_loss(logits, left_label, right_label):
     return cross_entropy_loss
 
 
+def accuracy(logits, left_label, right_label):
+    label = tf.equal(left_label, right_label)
+    labels = tf.cast(label, tf.int32)
+
+    logits = tf.cast(logits, tf.float32)
+    preds = tf.cast((logits < 0.5), tf.int32)
+ 
+    return tf.metrics.accuracy(labels=labels, predictions=preds) 
+     
+#     return tf.metrics.accuracy(labels=labels, predictions=preds) 
+
+
 
 def mean_average_precision(logits, left_label, right_label):
     label = tf.equal(left_label, right_label)
@@ -117,6 +129,6 @@ def mean_average_precision(logits, left_label, right_label):
     average_precision = tf.compat.v1.metrics.average_precision_at_k(
         labels=label_float,
         predictions=logits,
-        k=5
+        k=4
     )
     return average_precision

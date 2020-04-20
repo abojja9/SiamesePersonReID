@@ -3,7 +3,7 @@ import os
 import numpy as np
 import tensorflow as tf
 from data_utils import *
-from train_ops import network, contrastive_loss, identity_loss, mean_average_precision
+from train_ops import network, contrastive_loss, identity_loss, mean_average_precision, accuracy
 import time
 # tfrecords_path='./tf_records_data/'
 # BATCH_SIZE = 8
@@ -98,12 +98,14 @@ class SiameseNet(object):
         self.total_loss = {}
         self.mean_avg_precision = {}
         self.mean_avg_precision_up = {}
+        self.accuracy = {}
+        self.accuracy_up = {}
         self.summary = {}
         self.writer = {}
         self.output = {}
         self.left_feat = {}
         self.right_feat = {}
-
+  
         # --------------------
         # Create network with appropriate inputs
         for _set_type in ["train", "valid"]:
@@ -113,7 +115,7 @@ class SiameseNet(object):
 
             print("X:", x.shape)
             print("y:", y.shape)
-
+            
             summmary_list = []
             # Logits
             self.output[_set_type] = self.net(
@@ -134,7 +136,7 @@ class SiameseNet(object):
                 y=self.logits[_set_type], 
                 left_label=x_label, 
                 right_label=y_label, 
-                margin=0.2, 
+                margin=1.0, 
                 use_loss=True)
         
             self.identity_loss[_set_type] = self.loss_fn_1(
@@ -156,8 +158,13 @@ class SiameseNet(object):
                  left_label=x_label, 
                  right_label=y_label
             )
-                
-             
+            
+            
+            self.accuracy[_set_type], self.accuracy_up[_set_type] = accuracy(
+                 logits=self.logits[_set_type], 
+                 left_label=x_label, 
+                 right_label=y_label
+            )
             # Summary
             # summmary_list = []
             summmary_list += [tf.summary.image(
@@ -176,6 +183,9 @@ class SiameseNet(object):
             summmary_list += [tf.summary.scalar(
                 "mean_average_precision/{}".format(_set_type),
                 self.mean_avg_precision[_set_type])]
+            summmary_list += [tf.summary.scalar(
+                "accuracy/{}".format(_set_type),
+                self.accuracy[_set_type])]
             
             self.summary[_set_type] = tf.summary.merge(summmary_list)
             # Also build the writer for summary here
@@ -186,13 +196,13 @@ class SiameseNet(object):
         self.reset_local_var_op = tf.local_variables_initializer()
 
         # Variable to store best validation
-        self.best_mAP = tf.Variable(
+        self.best_acc = tf.Variable(
             initial_value=0, dtype=tf.float32,
-            name="best_mAP", trainable=False)
-        self.new_mAP = tf.placeholder(
+            name="best_acc", trainable=False)
+        self.new_acc = tf.placeholder(
             tf.float32, shape=(),
-            name='new_mAP')
-        self.assign_best = tf.assign(self.best_mAP, self.new_mAP)
+            name='new_acc')
+        self.assign_best = tf.assign(self.best_acc, self.new_acc)
 
         self.t_vars = tf.trainable_variables()
         for var in self.t_vars:
@@ -226,7 +236,6 @@ class SiameseNet(object):
 
         # We are using dataset API, no need to resume iteration
         # Reset dataset for training
-#         self.sess.run(self.reset_data["train"])
         training_handle = self.sess.run(self.iter_handle["train"].string_handle())
         while True:
 
@@ -235,9 +244,11 @@ class SiameseNet(object):
             # Setup fetch dictionary
             fetch = {
                 "optim": self.optim,
-                "mean_avg_precision": self.mean_avg_precision,
+                "mean_avg_precision_up": self.mean_avg_precision_up["train"],
+                "accuracy_up": self.accuracy_up["train"],
                 "step": self.global_step
             }
+            
 
             # Check summary intv
             # b_fetch_summary = (step == 0) or (
@@ -260,14 +271,16 @@ class SiameseNet(object):
                 )
                 # counter replaced by iterator
                 epoch = (res["step"] * self.batch_size) // self.num_training
+                
+                cur_acc = self.sess.run(self.accuracy["train"])
                 print(
-                    "Epoch: {}, Iteration: {}, Time: {}".format(
-                        epoch, res["step"], time.time() - start_time
+                    "Epoch: {}, Iteration: {}, Accuracy: {}, Time: {}".format(
+                        epoch, res["step"], cur_acc, time.time() - start_time
                     )
                 )
+                
                 # save model
                 self.save(args.checkpoint_dir, res["step"])
-                #from IPython import embed; embed()
 
             # The validation loop
             # b_validation = (step == 0) or (
@@ -277,31 +290,31 @@ class SiameseNet(object):
             # Perform validation
             if b_validation:
                 # Compare current result with best validation
-                best_mAP = self.sess.run(
-                    self.best_mAP, feed_dict={self.is_training: False})
-                # If first iteration, i.e. best_mAP is zero, save
+                best_acc = self.sess.run(
+                    self.best_acc, feed_dict={self.is_training: False})
+                # If first iteration, i.e. best_acc is zero, save
                 # immediately
-                if best_mAP < 1e-5:
+                if best_acc < 1e-5:
                     print("Savining model immediately for debug")
                     self.save(args.checkpoint_dir, res["step"], best=True)
 
                 # Test on the entire dataset
                 st_time = time.time()
                 val_res = self.test_on_dataset(mode="valid", args=args)
-                mAP = val_res["mean_avg_precision"]
+                acc = val_res["accuracy"]
                 print("time on validation:", time.time() - st_time)
 
                 print("Validation: best {}, cur {}".format(
-                    best_mAP, mAP))
+                    best_acc, acc))
 
-                if mAP > best_mAP:
+                if acc > best_acc:
                     self.sess.run(
                         self.assign_best,
                         feed_dict={
-                            self.new_mAP: mAP
+                            self.new_acc: acc
                         }
                     )
-                    print("Updated to new best {}".format(mAP))
+                    print("Updated to new best {}".format(acc))
                     self.save(args.checkpoint_dir, res["step"], best=True)
 
             # Quit if we ran enough iterations
@@ -395,7 +408,8 @@ class SiameseNet(object):
         precision = []
         for _i in range(num_batch):
             # Cumulate the mean_avg_precision
-            fetch["update"] = self.mean_avg_precision_up[mode]
+            fetch["mAP_update"] = self.mean_avg_precision_up[mode]
+            fetch["acc_update"] = self.accuracy_up[mode]
             fetch["step"] = self.global_step
             # Fetch also the summary for the first batch
             if _i == 0:
@@ -407,19 +421,17 @@ class SiameseNet(object):
             if "summary" in res:
                 summary = res["summary"]
                 
-#             precision.append(res["update"])
-           
-#         mean_precision = np.mean(np.array(precision))
-        # Fetch the final mean IOU
+        # Fetch the final mean AP, Accuracy
         mean_AP = self.sess.run(self.mean_avg_precision[mode])
+        acc = self.sess.run(self.accuracy[mode])
         # add result to create summary artificially and add IoU
         summary_new = tf.Summary(value=[
             tf.Summary.Value(
                 tag="mean_average_precision/{}".format(mode),
-                simple_value=mean_AP)
-#             tf.Summary.Value(
-#                 tag="mean_avg_precision_list/{}".format(mode),
-#                 simple_value=mean_precision),
+                simple_value=mean_AP),
+            tf.Summary.Value(
+                tag="accuracy/{}".format(mode),
+                simple_value=acc)
         ])
         self.writer[mode].add_summary(summary_new, res["step"])
         self.writer[mode].add_summary(summary, res["step"])
@@ -441,7 +453,7 @@ class SiameseNet(object):
                 cum_time += ed_time - st_time
             print("avg time to test a single batch:", cum_time / num_batch)
 
-        return {"mean_avg_precision": mean_AP}
+        return {"mean_avg_precision": mean_AP, "accuracy": acc}
     
 
     
