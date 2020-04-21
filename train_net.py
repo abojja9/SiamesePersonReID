@@ -3,7 +3,7 @@ import os
 import numpy as np
 import tensorflow as tf
 from data_utils import *
-from train_ops import network, contrastive_loss, identity_loss, mean_average_precision, accuracy, accuracy_metric, auroc
+from train_ops import network, contrastive_loss, identity_loss, mean_average_precision, accuracy, accuracy_metric
 import time
 # tfrecords_path='./tf_records_data/'
 # BATCH_SIZE = 8
@@ -99,7 +99,6 @@ class SiameseNet(object):
         self.mean_avg_precision = {}
         self.mean_avg_precision_up = {}
         self.accuracy = {}
-        self.auroc = {}
         self.summary = {}
         self.writer = {}
         self.output = {}
@@ -166,11 +165,6 @@ class SiameseNet(object):
                  right_label=y_label
             )
             
-            self.auroc[_set_type] = auroc(
-                 logits=self.logits[_set_type], 
-                 left_label=x_label, 
-                 right_label=y_label
-            )
             # Summary
             # summmary_list = []
             summmary_list += [tf.summary.image(
@@ -192,9 +186,6 @@ class SiameseNet(object):
             summmary_list += [tf.summary.scalar(
                 "accuracy/{}".format(_set_type),
                 self.accuracy[_set_type])]
-            summmary_list += [tf.summary.scalar(
-                "roc_auc_score/{}".format(_set_type),
-                self.auroc[_set_type])]
             
             self.summary[_set_type] = tf.summary.merge(summmary_list)
             # Also build the writer for summary here
@@ -255,7 +246,6 @@ class SiameseNet(object):
                 "optim": self.optim,
                 "mean_avg_precision_up": self.mean_avg_precision_up["train"],
                 "accuracy": self.accuracy["train"],
-                "auroc": self.auroc["train"],
                 "step": self.global_step
             }
             
@@ -417,12 +407,10 @@ class SiameseNet(object):
         fetch = {}
         precision = []
         accuracy_list = []
-        auroc_list = []
         for _i in range(num_batch):
             # Cumulate the mean_avg_precision
             fetch["mAP_update"] = self.mean_avg_precision_up[mode]
             fetch["accuracy"] = self.accuracy[mode]
-            fetch["auroc"] = self.auroc[mode]
             fetch["step"] = self.global_step
             # Fetch also the summary for the first batch
             if _i == 0:
@@ -434,10 +422,8 @@ class SiameseNet(object):
             if "summary" in res:
                 summary = res["summary"]
             accuracy_list.append(res["accuracy"])
-            auroc_list.append(res["auroc"])
             
         mean_acc = np.mean(np.array(accuracy_list))
-        mean_auroc = np.mean(np.array(accuracy_list))
                 
         # Fetch the final mean AP, Accuracy
         mean_AP = self.sess.run(self.mean_avg_precision[mode])
@@ -449,10 +435,7 @@ class SiameseNet(object):
                 simple_value=mean_AP),
             tf.Summary.Value(
                 tag="accuracy/{}".format(mode),
-                simple_value=mean_acc),
-            tf.Summary.Value(
-                tag="accuracy/{}".format(mode),
-                simple_value=mean_auroc)
+                simple_value=mean_acc)
         ])
         self.writer[mode].add_summary(summary_new, res["step"])
         self.writer[mode].add_summary(summary, res["step"])
@@ -474,7 +457,7 @@ class SiameseNet(object):
                 cum_time += ed_time - st_time
             print("avg time to test a single batch:", cum_time / num_batch)
 
-        return {"mean_avg_precision": mean_AP, "accuracy": mean_acc, "auroc": mean_auroc}
+        return {"mean_avg_precision": mean_AP, "accuracy": mean_acc}
     
 
     
