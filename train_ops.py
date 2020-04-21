@@ -2,6 +2,7 @@ import warnings
 warnings.filterwarnings("ignore")
 import tensorflow as tf
 import numpy as np
+from sklearn.metrics import roc_auc_score
 
 
 def conv2d(x, output_dim, ks=3, s=1, stddev=0.02, padding='SAME', name="conv2d", reuse=False):
@@ -25,6 +26,8 @@ def dense(x, units=4096, activation=tf.sigmoid, name="dense"):
 #     import pdb; pdb.set_trace()
     with tf.variable_scope(name):
         return tf.layers.dense(x, units, activation)
+    
+
 
 
 def model(input, is_training, batch_size, reuse=False):
@@ -78,9 +81,12 @@ def network(left_im, right_im, is_training, batch_size):
         right_features = model(right_im, is_training=is_training, batch_size=batch_size)
         print ("[*] Model ran")
         merged_features = tf.abs(tf.subtract(left_features, right_features))
-        logits = dense(merged_features, units=1, activation=None, name="last_dense")
+        logits = dense(merged_features, units=1, activation=tf.sigmoid, name="last_dense")
         logits = tf.reshape(logits, [-1])
     return logits, left_features, right_features
+
+
+
 
 
 def contrastive_loss(left_feat, right_feat, y, left_label, right_label, margin=1.0, use_loss=False):
@@ -92,7 +98,7 @@ def contrastive_loss(left_feat, right_feat, y, left_label, right_label, margin=1
         similarity = y * tf.square(distance)  # keep the similar label (1) close to each other
         dissimilarity = (1 - y) * tf.square(tf.maximum((margin - distance),
                                                        0))  # give penalty to dissimilar label if the distance is bigger than margin
-        similarity_loss = tf.reduce_mean(dissimilarity + similarity) / 2
+        similarity_loss = tf.reduce_mean(dissimilarity + similarity)
         if use_loss:
             tf.losses.add_loss(similarity_loss)
     return similarity_loss
@@ -116,9 +122,24 @@ def accuracy(logits, left_label, right_label):
     preds = tf.cast((logits < 0.5), tf.int32)
  
     return tf.metrics.accuracy(labels=labels, predictions=preds) 
-     
-#     return tf.metrics.accuracy(labels=labels, predictions=preds) 
 
+def accuracy_metric(logits, left_label, right_label):
+    label = tf.equal(left_label, right_label)
+    labels = tf.cast(label, tf.int32)
+
+    logits = tf.cast(logits, tf.float32)
+    preds = tf.cast((logits < 0.5), tf.int32)
+    
+    return tf.reduce_mean(tf.cast(tf.equal(preds, labels), tf.float32))
+ 
+
+def auroc(logits, left_label, right_label):
+    label = tf.equal(left_label, right_label)
+    labels = tf.cast(label, tf.int32)
+
+    logits = tf.cast(logits, tf.float32)
+    preds = tf.cast((logits < 0.5), tf.int32)
+    return tf.py_func(roc_auc_score, (labels, preds), tf.double)
 
 
 def mean_average_precision(logits, left_label, right_label):
