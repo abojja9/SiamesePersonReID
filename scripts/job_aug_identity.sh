@@ -7,5 +7,6 @@ python3 train_net.py \
 --lr=5e-5 \
 --summary_intv=1000 \
 --validation_intv=5000 \
+--data_augment=1 \
 --loss=identity \
 --tf_record_dir=./tf_record_dir_100k
