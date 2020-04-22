@@ -54,6 +54,10 @@ class SiameseNet(object):
         self.dataset = {} 
 
         self.handle = tf.placeholder(tf.string, shape=[])
+        if args.network_type == "pretrained":
+            pretrained = True
+        else:
+            pretrained = False
         
         for _set_type in ["train", "valid"]:
             if _set_type == "train":
@@ -67,7 +71,7 @@ class SiameseNet(object):
                 self.tf_record_dir + '/' + filename,
                 self.batch_size,
                 self.data_augment,
-                self.network_type,
+                pretrained,
                 train
             )
             
