@@ -3,7 +3,7 @@ import os
 import numpy as np
 import tensorflow as tf
 from data_utils import *
-from train_ops import network, contrastive_loss, identity_loss, mean_average_precision, accuracy, accuracy_metric
+from train_ops import network, contrastive_loss, identity_loss, mean_average_precision, accuracy, accuracy_metric, pretrained_network
 import time
 # tfrecords_path='./tf_records_data/'
 # BATCH_SIZE = 8
@@ -23,7 +23,7 @@ class SiameseNet(object):
         self.data_augment = args.data_augment
 
         if args.network_type == "pretrained":
-            self.net = pretrained  
+            self.net = pretrained_network  
         else:
             self.net = network
             
@@ -67,6 +67,7 @@ class SiameseNet(object):
                 self.tf_record_dir + '/' + filename,
                 self.batch_size,
                 self.data_augment,
+                self.network_type,
                 train
             )
             
@@ -212,8 +213,13 @@ class SiameseNet(object):
             tf.float32, shape=(),
             name='new_acc')
         self.assign_best = tf.assign(self.best_acc, self.new_acc)
-
+        
+#         if args.network_type == "pretrained":
+#             self.t_vars = tf.trainable_variables(scope="trainable_section")
+#         else:
         self.t_vars = tf.trainable_variables()
+            
+        print("[*] Trainable variables:")
         for var in self.t_vars:
             print(var.name)
   

@@ -19,6 +19,9 @@ def relu(x, name="relu"):
 def maxpool2d(x, pool_size=2, strides=2, padding='valid', name='maxpool2d'):
     return tf.layers.max_pooling2d(x, pool_size=pool_size, strides=strides, padding=padding, name=name)
 
+def avgpool2d(x, pool_size=2, strides=2, padding='valid', name='avgpool2d'):
+    return tf.layers.AveragePooling2D(pool_size=pool_size, strides=strides, padding=padding, name=name)(x)
+
 def flatten(x, name="flatten"):
     return tf.contrib.layers.flatten(x, scope=name)
 
@@ -82,6 +85,30 @@ def network(left_im, right_im, is_training, batch_size):
         print ("[*] Model ran")
         merged_features = tf.abs(tf.subtract(left_features, right_features))
         logits = dense(merged_features, units=1, activation=tf.sigmoid, name="last_dense")
+        logits = tf.reshape(logits, [-1])
+    return logits, left_features, right_features
+
+def pretrained_model(x):
+    with tf.variable_scope('pretrained_features'):
+        model = tf.keras.applications.VGG16(include_top=False, input_shape=(256, 128, 3))
+        net = model(x) 
+        print ("NET output", np.shape(net))
+        net = avgpool2d(net)
+        
+        net = tf.reshape(net, [tf.shape(net)[0], 4096])
+        return net
+    
+def pretrained_network(left_im, right_im, is_training, batch_size): 
+    with tf.variable_scope('feature_generator', reuse=tf.AUTO_REUSE) as sc:
+        left_features = pretrained_model(left_im)
+        right_features = pretrained_model(right_im)
+        print ("[*] Model ran")
+        merged_features = tf.abs(tf.subtract(left_features, right_features))
+    
+    with tf.variable_scope('trainable_section', reuse=tf.AUTO_REUSE):
+        feat_out = dense(merged_features, units=1024, activation=None, name="first_dense")
+        feat_out = relu(feat_out, name="t_relu")
+        logits = dense(feat_out, units=1, activation=tf.sigmoid, name="second_dense")
         logits = tf.reshape(logits, [-1])
     return logits, left_features, right_features
 
