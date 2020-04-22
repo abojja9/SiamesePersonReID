@@ -99,6 +99,8 @@ class SiameseNet(object):
         self.mean_avg_precision = {}
         self.mean_avg_precision_up = {}
         self.accuracy = {}
+        self.accuracy_up = {}
+        self.accuracy_metric = {}
         self.summary = {}
         self.writer = {}
         self.output = {}
@@ -159,12 +161,16 @@ class SiameseNet(object):
             )
             
             
-            self.accuracy[_set_type] = accuracy_metric(
+            self.accuracy_metric[_set_type] = accuracy_metric(
                  logits=self.logits[_set_type], 
                  left_label=x_label, 
                  right_label=y_label
             )
-            
+            self.accuracy[_set_type], self.accuracy_up[_set_type] = accuracy(
+                 logits=self.logits[_set_type], 
+                 left_label=x_label, 
+                 right_label=y_label
+            )
             # Summary
             # summmary_list = []
             summmary_list += [tf.summary.image(
@@ -186,11 +192,14 @@ class SiameseNet(object):
             summmary_list += [tf.summary.scalar(
                 "accuracy/{}".format(_set_type),
                 self.accuracy[_set_type])]
+            summmary_list += [tf.summary.scalar(
+                "accuracy_metric/{}".format(_set_type),
+                self.accuracy_metric[_set_type])]
             
             self.summary[_set_type] = tf.summary.merge(summmary_list)
             # Also build the writer for summary here
             self.writer[_set_type] = tf.summary.FileWriter(
-                os.path.join(self.log_dir, _set_type))
+                os.path.join(self.log_dir, _set_type), self.sess.graph)
 
         # Reset op for initializing local variables in metric
         self.reset_local_var_op = tf.local_variables_initializer()
@@ -245,7 +254,8 @@ class SiameseNet(object):
             fetch = {
                 "optim": self.optim,
                 "mean_avg_precision_up": self.mean_avg_precision_up["train"],
-                "accuracy": self.accuracy["train"],
+                "accuracy_up": self.accuracy_up["train"],
+                "accuracy_metric": self.accuracy_metric["train"],
                 "step": self.global_step
             }
             
@@ -275,7 +285,7 @@ class SiameseNet(object):
 #                 cur_acc = self.sess.run(self.accuracy["train"])
                 print(
                     "Epoch: {}, Iteration: {}, Accuracy: {}, Time: {}".format(
-                        epoch, res["step"], res["accuracy"], time.time() - start_time
+                        epoch, res["step"], res["accuracy_metric"], time.time() - start_time
                     )
                 )
                 
@@ -410,7 +420,8 @@ class SiameseNet(object):
         for _i in range(num_batch):
             # Cumulate the mean_avg_precision
             fetch["mAP_update"] = self.mean_avg_precision_up[mode]
-            fetch["accuracy"] = self.accuracy[mode]
+            fetch["accuracy_update"] = self.accuracy_up[mode]
+            fetch["accuracy_metric"] = self.accuracy_metric[mode]
             fetch["step"] = self.global_step
             # Fetch also the summary for the first batch
             if _i == 0:
@@ -421,19 +432,22 @@ class SiameseNet(object):
             # Save the first batch summary to report
             if "summary" in res:
                 summary = res["summary"]
-            accuracy_list.append(res["accuracy"])
+            accuracy_list.append(res["accuracy_metric"])
             
-        mean_acc = np.mean(np.array(accuracy_list))
+        mean_acc_metric = np.mean(np.array(accuracy_list))
                 
         # Fetch the final mean AP, Accuracy
         mean_AP = self.sess.run(self.mean_avg_precision[mode])
-#         acc = self.sess.run(self.accuracy[mode])
+        mean_acc = self.sess.run(self.accuracy[mode])
         # add result to create summary artificially and add IoU
         summary_new = tf.Summary(value=[
             tf.Summary.Value(
                 tag="mean_average_precision/{}".format(mode),
                 simple_value=mean_AP),
             tf.Summary.Value(
+                tag="accuracy_metric/{}".format(mode),
+                simple_value=mean_acc_metric),
+             tf.Summary.Value(
                 tag="accuracy/{}".format(mode),
                 simple_value=mean_acc)
         ])
