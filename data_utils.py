@@ -91,8 +91,10 @@ def load_data_from_tfrecord(filename, augment=False, pretrained=False, shuffle_b
         # 5: Preprocess the data.
         # Convert `image` from [0, 255] -> [0, 1.0] floats
         if pretrained:
+            print("Imagenet stats")
             image = _normalize(image)
         else:
+            print("Normal stats")
             image = image * (1. / 255)
 
         return image, features['image/category'], features['image/format']

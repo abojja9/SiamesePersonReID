@@ -21,6 +21,11 @@ class SiameseNet(object):
         self.tf_record_dir = args.tf_record_dir
         self.loss_fn = args.loss
         self.data_augment = args.data_augment
+        self.dropout = args.dropout
+        if self.dropout:
+            self.drop_prob = 0.2
+        else:
+            self.drop_prob = 0.0
 
         if args.network_type == "pretrained":
             self.net = pretrained_network  
@@ -93,6 +98,7 @@ class SiameseNet(object):
         
     def _build_model(self, args):
         self.is_training = tf.placeholder(tf.bool, name='is_training')
+        self.dropout_rate = tf.placeholder_with_default(0.2, shape=(), name='dropout_rate')
 
         # --------------------
         # Create different logits and class_probs depending on input
@@ -127,6 +133,7 @@ class SiameseNet(object):
             self.output[_set_type] = self.net(
                 left_im=x,
                 right_im=y,
+                dropout_rate=self.dropout_rate,
                 is_training=self.is_training,
                 batch_size=self.batch_size
             )
@@ -256,6 +263,7 @@ class SiameseNet(object):
         # We are using dataset API, no need to resume iteration
         # Reset dataset for training
         training_handle = self.sess.run(self.iter_handle["train"].string_handle())
+        validation_handle = self.sess.run(self.iter_handle["valid"].string_handle())
         while True:
 
             # Fetch step
@@ -280,8 +288,11 @@ class SiameseNet(object):
 
             # Run session
             res = self.sess.run(fetch, 
-                                feed_dict={self.is_training: True, self.handle: training_handle}
-                               )
+                                feed_dict={
+                                    self.is_training: True,
+                                    self.dropout_rate: self.drop_prob, 
+                                    self.handle: training_handle
+                                })
 
             # Get summary every reporting interval
             if b_fetch_summary:
@@ -311,7 +322,7 @@ class SiameseNet(object):
             if b_validation:
                 # Compare current result with best validation
                 best_acc = self.sess.run(
-                    self.best_acc, feed_dict={self.is_training: False})
+                    self.best_acc, feed_dict={self.is_training: False, self.dropout_rate: 0.0, self.handle: validation_handle})
                 # If first iteration, i.e. best_acc is zero, save
                 # immediately
                 if best_acc < 1e-5:
@@ -347,12 +358,12 @@ class SiameseNet(object):
     def get_model_str(self, best=False):
         if best is True:
             model_name = "mars.best.model"
-            model_dir = f"MARS_PERSON_REID_BEST_MODELS_{self.loss}_{self.network_type}_{self.batch_size}_{self.lr}_augment_{self.data_augment}" 
+            model_dir = f"MARS_PERSON_REID_BEST_MODELS_{self.loss}_{self.network_type}_{self.batch_size}_{self.lr}_augment_{self.data_augment}_dropout_{self.dropout}" 
 #             % (
 #                 self.loss, self.network_type, self.batch_size, self.lr)
         else:
             model_name = "mars.model"
-            model_dir = f"MARS_PERSON_REID_{self.loss}_{self.network_type}_{self.batch_size}_{self.lr}_augment_{self.data_augment}"
+            model_dir = f"MARS_PERSON_REID_{self.loss}_{self.network_type}_{self.batch_size}_{self.lr}_augment_{self.data_augment}_dropout_{self.dropout}"
 #             "%s_%s_%s" % (
 #                 self.loss, self.network_type, self.batch_size, self.lr)
         print ("[*]", model_name, model_dir)
@@ -438,7 +449,7 @@ class SiameseNet(object):
                 fetch["summary"] = self.summary[mode]
             # Run
             res = self.sess.run(
-                fetch, feed_dict={self.is_training: False, self.handle: validation_handle})
+                fetch, feed_dict={self.is_training: False, self.dropout_rate: 0.0, self.handle: validation_handle})
             # Save the first batch summary to report
             if "summary" in res:
                 summary = res["summary"]
@@ -500,6 +511,7 @@ parser.add_argument('--save_latest_freq', dest='save_latest_freq', type=int, def
 parser.add_argument('--continue_train', dest='continue_train', type=bool, default=True, help='if continue training, load the latest model: 1: true, 0: false')
 parser.add_argument('--subset_data', dest='subset_data', type=bool, default=False, help='if subset_data is true use 1000 sample to create the data: 1: true, 0: false')
 parser.add_argument('--data_augment', dest='data_augment', type=bool, default=False, help='if data_augment is true use data augmentation: 1: true, 0: false')
+parser.add_argument('--dropout', dest='dropout', type=bool, default=False, help='if dropout is true use drop weights: 1: true, 0: false')
 
 parser.add_argument('--network_type', dest='network_type', default='siamese',help='pretrained, siamese')
 parser.add_argument('--checkpoint_dir', dest='checkpoint_dir', default='./checkpoint', help='models are saved here')

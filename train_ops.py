@@ -30,10 +30,11 @@ def dense(x, units=4096, activation=tf.sigmoid, name="dense"):
     with tf.variable_scope(name):
         return tf.layers.dense(x, units, activation)
     
+def dropout(x, rate=0.1, is_training=False, name="dropout"):
+    with tf.variable_scope(name):
+        return tf.nn.dropout(x, rate=rate)
 
-
-
-def model(input, is_training, batch_size, reuse=False):
+def model_net(input, is_training, batch_size, reuse=False):
     print(np.shape(input))
     with tf.name_scope("model"):
         # Group 1
@@ -78,15 +79,70 @@ def model(input, is_training, batch_size, reuse=False):
     return net
 
 
-def network(left_im, right_im, is_training, batch_size):
+def model_dropout(input, is_training, dropout_rate, batch_size, reuse=False):
+    print(np.shape(input))
+    with tf.name_scope("model"):
+        # Group 1
+        net = conv2d(input, 256, name='g_1_conv')
+        print(np.shape(net))
+        net = maxpool2d(net, name='g_1_maxpool')
+        net = batch_norm(net, is_training, name='g_1_batchnorm')
+        net = dropout(net, dropout_rate, is_training, name="g_1_dropout")
+        net = relu(net, name='g_1_relu')
+        print(np.shape(net))
+        
+        # Group 2
+        net = conv2d(net, 128, name='g_2_conv')
+        print(np.shape(net))
+        net = maxpool2d(net, name='g_2_maxpool')
+        net = batch_norm(net, is_training, name='g_2_batchnorm')
+        net = dropout(net, dropout_rate, is_training, name="g_2_dropout")
+        net = relu(net, name='g_2_relu')
+        print(np.shape(net))
+        
+        # Group 3
+        net = conv2d(net, 64, name='g_3_conv')
+        print(np.shape(net))
+        net = maxpool2d(net, name='g_3_maxpool')
+        net = batch_norm(net, is_training, name='g_3_batchnorm')
+        net = dropout(net, dropout_rate, is_training, name="g_3_dropout")
+        net = relu(net, name='g_3_relu')
+        print(np.shape(net))
+        
+        # Group 4
+        net = conv2d(net, 32, name='g_4_conv')
+        print(np.shape(net))
+        net = maxpool2d(net, name='g_4_maxpool')
+        net = batch_norm(net, is_training, name='g_4_batchnorm')
+        net = dropout(net, dropout_rate, is_training, name="g_4_dropout")
+        net = relu(net, name='g_4_relu')
+        print(np.shape(net))
+        
+#         net = flatten(net)
+        net = tf.reshape(net, [tf.shape(net)[0], 4096])
+        print(np.shape(net))
+
+        net = dense(net, 4096, activation=tf.sigmoid, name="model_dense_layer")
+        net = dropout(net, dropout_rate, is_training, name="dense_dropout")
+        print(np.shape(net))
+        
+    return net
+
+
+def network(left_im, right_im, dropout_rate, is_training, batch_size):
     with tf.variable_scope('feature_generator', reuse=tf.AUTO_REUSE) as sc:
-        left_features = model(left_im, is_training=is_training, batch_size=batch_size)
-        right_features = model(right_im, is_training=is_training, batch_size=batch_size)
+#         if dropout:
+#             model = model_dropout
+#         else:
+#             model = model_net
+        left_features = model_dropout(left_im, is_training=is_training, dropout_rate=dropout_rate, batch_size=batch_size)
+        right_features = model_dropout(right_im, is_training=is_training, dropout_rate=dropout_rate, batch_size=batch_size)
         print ("[*] Model ran")
         merged_features = tf.abs(tf.subtract(left_features, right_features))
         logits = dense(merged_features, units=1, activation=tf.sigmoid, name="last_dense")
         logits = tf.reshape(logits, [-1])
     return logits, left_features, right_features
+
 
 def pretrained_model(x):
     with tf.variable_scope('pretrained_features'):
