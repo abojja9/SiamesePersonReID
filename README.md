@@ -1,4 +1,4 @@
-# Metric Learning for Person Re-identification
+# Metric Learning for Person Re-Identification task using MARS dataset
 This repo contains the training and evaluation framework for the Person Re Identification task using Siamese Network on MARS dataset. The code is implemented in Tensorflow 1.15.
 
 
