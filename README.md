@@ -4,6 +4,7 @@ This repo contains the training and evaluation framework for the Person Re Ident
 
 
 ## Installation
+Create a python virtual environment and install the dependancies.
 
 ```
 pip3 install -r requirements.txt
@@ -45,11 +46,18 @@ python3 data_tfrecord.py --dataset_dir=./data --tf_record_dir=./tf_record_dir
 
 The model creates checkpoints and logs to the folders ./checkpoint ./log.
 
+Optionally, we can Use the script scripts/job_contrastive.sh to run the training. Please change the path to the virtual environment used.
+
+```
+sh scripts/job_contrastive.sh
+```
+
 Training evolution can be viewed on Tensorboard by running
 ```
 tensorboard --logdir ./log
 ```
 
+T
 ## Testing 
 
 ```
