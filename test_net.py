@@ -42,11 +42,13 @@ class EvalSiameseNet(object):
 
         print(np.shape(self.x), np.shape(self.y))
         self.logits, self.left_feat, self.right_feat = self.net(
-                left_im=self.x,
-                right_im=self.y,
-                is_training=False,
-                batch_size=args.test_batch_size)
-        
+            left_im=self.x,
+            right_im=self.y,
+            dropout_rate=0,
+            is_training=False,
+            batch_size=args.test_batch_size
+        )
+
                      # Loss
 #         self.contrastive_loss = self.loss_fn_2(
 #             left_feat=self.left_feat, 

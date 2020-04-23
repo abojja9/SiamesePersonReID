@@ -188,7 +188,7 @@ def contrastive_loss(left_feat, right_feat, y, left_label, right_label, margin=1
 
 
 def identity_loss(logits, left_label, right_label):
-    label = tf.equal(left_label, right_label)
+    label = tf.math.not_equal(left_label, right_label)
     label_float = tf.cast(label, tf.float32)
 
     logits = tf.cast(logits, tf.float32)
