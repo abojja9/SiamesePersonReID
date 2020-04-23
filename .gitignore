@@ -14,4 +14,4 @@ jobs/
 slurm*
 *zip
 !scripts/*.sh
-*.ipynb
+siamese.ipynb
