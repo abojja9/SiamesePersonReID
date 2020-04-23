@@ -497,6 +497,7 @@ class SiameseNet(object):
 
     
 parser = argparse.ArgumentParser(description='')
+parser.add_argument('dataset_dir', help='path of the dataset')
 
 parser.add_argument('--max_iter', dest='max_iter', type=int, default=500000, help='# of max sgd iter')
 parser.add_argument('--validation_intv', dest='validation_intv', type=int, default=1000, help='# of max sgd iter')
@@ -520,7 +521,7 @@ parser.add_argument('--test_dir', dest='test_dir', default='./test', help='test 
 parser.add_argument('--log_dir', dest='log_dir', default='./log', help='test sample are saved here')
 parser.add_argument('--loss', dest='loss', default='contrastive', help='contrastive, identity, combined')
 # Dataset related
-parser.add_argument('--dataset_dir', dest='dataset_dir', default='./data', help='path of the dataset')
+
 parser.add_argument('--tf_record_dir', dest='tf_record_dir', default='./tf_record_dir', help='path of the dataset')
 # parser.add_argument('--num_thread', dest='num_thread', type=int, default=16, help='# of threads')
 
