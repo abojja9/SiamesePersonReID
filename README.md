@@ -57,7 +57,6 @@ Training evolution can be viewed on Tensorboard by running
 tensorboard --logdir ./log
 ```
 
-T
 ## Testing 
 
 ```
