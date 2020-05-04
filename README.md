@@ -70,3 +70,12 @@ The test_net file outputs different distance metrics and a visualization result 
 
 Results are improvements are explained in the report.pdf
 
+# References
+
+- https://github.com/visipedia/tfrecords/blob/master/create_tfrecords.py
+- https://sorenbouma.github.io/blog/oneshot/
+- https://github.com/serfaniane/siamese_person_re_id
+- https://github.com/KaiyangZhou/deep-person-reid
+- https://www.kaggle.com/arpandhatt/siamese-neural-networks
+
+
