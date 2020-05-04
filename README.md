@@ -68,7 +68,7 @@ The test_net file outputs different distance metrics and a visualization result 
 
 # Results and Improvements
 
-Results are improvements are explained in the report.pdf
+Results and improvements are explained in the **report.pdf**
 
 # References
 
